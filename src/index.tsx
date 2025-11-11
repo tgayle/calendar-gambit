@@ -4,6 +4,7 @@ import chess, { gameToEvent } from "./lib/chess";
 import { createEvents } from "ics";
 import { google } from "googleapis";
 import googleCreds from "../google_secret.json";
+import UserDao from "./lib/db/UserDao";
 
 const getGoogleOauthClient = () =>
   new google.auth.OAuth2(
@@ -57,7 +58,10 @@ const server = serve({
     },
 
     "/auth/google": async (req) => {
-      const scopes = ["https://www.googleapis.com/auth/calendar.app.created"];
+      const scopes = [
+        "https://www.googleapis.com/auth/calendar.app.created",
+        "https://www.googleapis.com/auth/userinfo.email",
+      ];
 
       const state = crypto.randomUUID();
       const url = googleOauth.generateAuthUrl({
@@ -89,11 +93,32 @@ const server = serve({
       console.log({ code, state });
 
       const { tokens } = await googleOauth.getToken(code);
-      console.log("Obtained tokens:", tokens);
 
       const userClient = getGoogleOauthClient();
       userClient.setCredentials(tokens);
-      return Response.json({});
+
+      const userInfo = await google
+        .oauth2("v2")
+        .userinfo.get({ oauth_token: tokens.access_token });
+
+      const userId = userInfo.data.id;
+      const email = userInfo.data.email;
+
+      let user = await UserDao.getUserById(userId);
+      if (!user) {
+        console.log("Creating new user in DB:", { userId, email });
+        user = await UserDao.createUser(
+          userId,
+          email,
+          tokens.refresh_token,
+          tokens.access_token
+        );
+      }
+
+      return Response.json({
+        id: userId,
+        email,
+      });
     },
   },
 
