@@ -1,12 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import "./index.css";
 import { Spinner } from "./components/ui/spinner";
-import { createContext, useEffect, useState } from "react";
+import { createContext, useState } from "react";
 import { Button } from "./components/ui/button";
 import { useFetch } from "./lib/hooks/useFetch";
-import { SubscriptionsList } from "./components/SubscriptionsList";
-import { Label } from "./components/ui/label";
 import { Input } from "./components/ui/input";
+import { Separator } from "./components/ui/separator";
+import { CopyIcon } from "lucide-react";
 
 type User = {
   id: string;
@@ -18,44 +18,41 @@ const UserContext = createContext<User | null>(null);
 
 export function App() {
   const user = useUser();
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [username, setUsername] = useState("MagnusCarlsen");
+  const icsUrl = `${window.location.origin}/games/${username}/calendar.ics`;
   return (
     <UserContext.Provider value={user.data}>
       <div className="container mx-auto p-8 relative z-10 ">
         <div className="flex justify-center items-center gap-8 mb-8">
-          <Card className="w-96">
+          <Card className="w-120">
             <CardHeader>
               <CardTitle>Calendar Gambit</CardTitle>
             </CardHeader>
             <CardContent>
-              {user.loading ? (
-                <div className="flex justify-center">
-                  <Spinner />
-                </div>
-              ) : (
-                <div className="flex flex-col gap-4">
-                  <div className="self-end">
-                    <Button variant="outline" className="">
-                      Sign out
-                    </Button>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="add_subscription">
-                      Follow a user's games:
-                    </Label>
-
-                    <AddSubscriptionForm
-                      onAdded={() => setRefreshKey(refreshKey + 1)}
-                    />
-                  </div>
-
-                  <SubscriptionsList
-                    key={refreshKey}
-                    onChange={() => setRefreshKey(refreshKey + 1)}
+              This website exports Chess.com games to iCalendar format, so you
+              can import them into your calendar application of choice.
+              <Separator className="my-4" />
+              <div className="flex items-baseline flex-wrap pb-4">
+                To subscribe to games for{" "}
+                <span className="whitespace-break-spaces">
+                  <Input
+                    className="w-min mx-1"
+                    placeholder="Username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
                   />
-                </div>
-              )}
+                </span>{" "}
+                use the following URL in your calendar app:
+              </div>
+              <div className="flex gap-2">
+                <Input disabled value={icsUrl}></Input>
+                <Button
+                  onClick={() => navigator.clipboard.writeText(icsUrl)}
+                  variant="outline"
+                >
+                  <CopyIcon />
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
