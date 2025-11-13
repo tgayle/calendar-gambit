@@ -23,12 +23,14 @@ type Game = {
 
 class ChessAPI {
   getArchivedGames(username: string) {
+    console.log("Fetching archives for", username);
     return ky(`https://api.chess.com/pub/player/${username}/games/archives`, {
       throwHttpErrors: false,
     }).json<{ archives: string[] } | { code: 0 }>();
   }
 
   getArchivedGamesByUrl(url: string) {
+    console.log("Fetching archived games from", url);
     return ky(url).json<{ games: Game[] }>();
   }
 

@@ -3,17 +3,17 @@ import index from "./index.html";
 import chess, { gameToEvent } from "./lib/chess";
 import { createEvents } from "ics";
 import { google } from "googleapis";
-import googleCreds from "../google_secret.json";
+// import googleCreds from "../google_secret.json";
 import UserDao from "./lib/db/UserDao";
 
-const getGoogleOauthClient = () =>
-  new google.auth.OAuth2(
-    googleCreds.web.client_id,
-    googleCreds.web.client_secret,
-    googleCreds.web.redirect_uris[0]
-  );
+// const getGoogleOauthClient = () =>
+//   new google.auth.OAuth2(
+//     googleCreds.web.client_id,
+//     googleCreds.web.client_secret,
+//     googleCreds.web.redirect_uris[0]
+//   );
 
-const googleOauth = getGoogleOauthClient();
+// const googleOauth = getGoogleOauthClient();
 
 const server = serve({
   routes: {
