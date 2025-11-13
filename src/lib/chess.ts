@@ -23,9 +23,9 @@ type Game = {
 
 class ChessAPI {
   getArchivedGames(username: string) {
-    return ky(
-      `https://api.chess.com/pub/player/${username}/games/archives`
-    ).json<{ archives: string[] }>();
+    return ky(`https://api.chess.com/pub/player/${username}/games/archives`, {
+      throwHttpErrors: false,
+    }).json<{ archives: string[] } | { code: 0 }>();
   }
 
   getArchivedGamesByUrl(url: string) {
@@ -34,6 +34,11 @@ class ChessAPI {
 
   async getAllArchivedGames(username: string) {
     const archives = await this.getArchivedGames(username);
+
+    if ("code" in archives) {
+      return [];
+    }
+
     const allGames = await Promise.all(
       archives.archives.map((archive) => this.getArchivedGamesByUrl(archive))
     );

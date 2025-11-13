@@ -17,7 +17,6 @@ const googleOauth = getGoogleOauthClient();
 
 const server = serve({
   routes: {
-    // Serve index.html for all unmatched routes.
     "/*": index,
 
     "/games/:username": {
@@ -57,6 +56,77 @@ const server = serve({
       },
     },
 
+    "/me": async (req) => {
+      const user = await requireAuthorized(req);
+      if (!user) {
+        return Response.json({ error: "Unauthorized" }, { status: 401 });
+      }
+
+      return Response.json({
+        id: user.id,
+        chessUsername: user.chessUsername,
+        email: user.email,
+      });
+    },
+    "/subscriptions": {
+      GET: async (req) => {
+        const user = await requireAuthorized(req);
+        if (!user) {
+          return Response.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const subs = await UserDao.getUserSubscriptions(user.id);
+
+        return Response.json({
+          users: subs.map((it) => ({
+            name: it.chessUsername,
+            since: it.createdAt,
+          })),
+        });
+      },
+      POST: async (req) => {
+        const user = await requireAuthorized(req);
+        if (!user) {
+          return Response.json({ error: "Unauthorized" }, { status: 401 });
+        }
+        const { username } = await req.json();
+
+        if (!username) {
+          return Response.json({
+            error: "Username required",
+          });
+        }
+
+        const archives = await chess.getArchivedGames(username);
+        if ("code" in archives) {
+          return Response.json({
+            error: "User not found",
+          });
+        }
+
+        await UserDao.createUserSubscription(user.id, username);
+
+        return Response.json({});
+      },
+      DELETE: async (req) => {
+        const user = await requireAuthorized(req);
+        if (!user) {
+          return Response.json({ error: "Unauthorized" }, { status: 401 });
+        }
+        const { username } = await req.json();
+
+        if (!username) {
+          return Response.json({
+            error: "Username required",
+          });
+        }
+
+        await UserDao.deleteUserSubscription(user.id, username);
+
+        return Response.json({});
+      },
+    },
+
     "/auth/google": async (req) => {
       const scopes = [
         "https://www.googleapis.com/auth/calendar.app.created",
@@ -90,8 +160,6 @@ const server = serve({
         return Response.redirect("/");
       }
 
-      console.log({ code, state });
-
       const { tokens } = await googleOauth.getToken(code);
 
       const userClient = getGoogleOauthClient();
@@ -99,26 +167,30 @@ const server = serve({
 
       const userInfo = await google
         .oauth2("v2")
-        .userinfo.get({ oauth_token: tokens.access_token });
+        .userinfo.get({ oauth_token: tokens.access_token! });
 
-      const userId = userInfo.data.id;
-      const email = userInfo.data.email;
+      const userId = userInfo.data.id!;
+      const email = userInfo.data.email!;
 
-      let user = await UserDao.getUserById(userId);
+      let user = await UserDao.getUserByGoogleId(userId);
       if (!user) {
         console.log("Creating new user in DB:", { userId, email });
         user = await UserDao.createUser(
           userId,
           email,
-          tokens.refresh_token,
-          tokens.access_token
+          tokens.refresh_token!,
+          tokens.access_token!
         );
       }
 
-      return Response.json({
-        id: userId,
-        email,
+      const session = await UserDao.createUserSession(user.id);
+
+      req.cookies.set("session", session.sessionId, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
       });
+
+      return Response.redirect("/");
     },
   },
 
@@ -132,3 +204,21 @@ const server = serve({
 });
 
 console.log(`🚀 Server running at ${server.url}`);
+
+async function requireAuthorized(req: Bun.BunRequest) {
+  const sessionId = req.cookies.get("session");
+
+  if (sessionId) {
+    const session = await UserDao.getSessionById(sessionId);
+
+    if (session) {
+      const user = await UserDao.getUserById(session.userId);
+      if (user) {
+        return user;
+      }
+    }
+  }
+
+  req.cookies.delete("session");
+  return null;
+}
