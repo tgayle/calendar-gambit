@@ -1,7 +1,9 @@
 @import "../styles/globals.css";
 
 @layer base {
-  :root {
+  :root,
+  body {
     @apply font-sans;
+    background: black;
   }
 }
