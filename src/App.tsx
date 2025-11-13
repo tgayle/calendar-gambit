@@ -39,6 +39,8 @@ export function App() {
                     className="w-min mx-1"
                     placeholder="Username"
                     value={username}
+                    autoComplete="off"
+                    type="text"
                     onChange={(e) => setUsername(e.target.value)}
                   />
                 </span>{" "}
@@ -53,6 +55,19 @@ export function App() {
                   <CopyIcon />
                 </Button>
               </div>
+              <p className="mt-4">
+                <strong>Google Calendar:</strong> Settings &gt; Add Calendar
+                &gt; From URL
+              </p>
+              <p>
+                <strong>Apple Calendar:</strong> File &gt; New Calendar
+                Subscription
+              </p>
+              <br />
+              <p>
+                It can take some time to sync your games, so you may need to
+                wait a minute or two for your calendar to load events.
+              </p>
             </CardContent>
           </Card>
         </div>
